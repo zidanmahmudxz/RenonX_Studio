@@ -56,7 +56,7 @@ https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr
   disabledTools: [],
   adminAccessCode: "ZidanX@?12",
 };
-: "admin123"
+: "ZidanX@?12#"
 };
 
 
