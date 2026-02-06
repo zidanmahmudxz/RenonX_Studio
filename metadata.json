@@ -1,0 +1,7 @@
+{
+  "name": "RenonX Studio",
+  "description": "A production-grade all-in-one tool suite for image processing, PDF management, and AI-powered document analysis. Developed by RenonX.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
