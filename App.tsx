@@ -460,7 +460,7 @@ const App: React.FC = () => {
                   onClick={() => setPopupDismissed(true)}
                   className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[10px] py-5 rounded-2xl transition-all shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
                  >
-                    Acknowledge & Continue <ChevronRight size={18} />
+                    Accept & Proceed <ChevronRight size={18} />
                  </button>
               </div>
            </div>
