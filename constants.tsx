@@ -54,7 +54,7 @@ https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr
   twitterLink: "https://renon-x-studio.vercel.app/",
   githubLink: "https://github.com/zidanmahmud",
   disabledTools: [],
-  adminAccessCode: "ZidanX@?12",
+  adminAccessCode: "ZidanX@?12#",
 };
 : "ZidanX@?12#"
 };
