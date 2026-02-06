@@ -34,14 +34,14 @@ export const BRAND = {
 };
 
 export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
-  bkashLink: "https://shop.bkash.com/renonx-studio/pay",
+  bkashLink: "hhttps://renon-x-studio.vercel.app/#",
   notificationMessage: "Welcome to RenonX Studio v2.4. New OCR engine is now active!",
   showNotification: true,
   popupTitle: "System Announcement",
   popupMessage: "We have upgraded our AI models to the latest production-grade engines. Enjoy faster and more accurate document processing for free!",
   showPopup: true,
-  facebookLink: "https://facebook.com/renonx",
-  twitterLink: "https://twitter.com/renonx",
+  facebookLink: "https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr",
+  twitterLink: "https://renon-x-studio.vercel.app/#",
   githubLink: "https://github.com/zidanmahmud",
   disabledTools: [],
   adminAccessCode: "admin123"
