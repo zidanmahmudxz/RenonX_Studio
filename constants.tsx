@@ -41,7 +41,7 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   popupMessage: "RenonX AI Studio-তে স্বাগতম! এখানে সকল AI টুল সম্পূর্ণ ফ্রি ব্যবহার করতে পারবেন। সিস্টেম ম্যানেজমেন্ট ও উন্নয়নের জন্য চাইলে আমাদেরকে ডোনেট করে সহযোগিতা করতে পারেন। আপনার সহায়তাই আমাদের এগিয়ে যেতে সাহায্য করবে। 💙",
   showPopup: true,
   facebookLink: "https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr",
-  twitterLink: "https://renon-x-studio.vercel.app/#",
+  twitterLink: "https://renon-x-studio.vercel.app/",
   githubLink: "https://github.com/zidanmahmud",
   disabledTools: [],
   adminAccessCode: "admin123"
