@@ -446,6 +446,16 @@ const App: React.FC = () => {
                  <p className="text-slate-400 text-sm md:text-base font-medium leading-relaxed mb-8 px-2 md:px-4">
                     {adminSettings.popupMessage}
                  </p>
+                <a
+  href={adminSettings.facebookLink}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600 hover:text-white transition-all mb-6"
+  title="Message on Facebook"
+>
+  <Facebook size={18} />
+</a>
+
                  <button 
                   onClick={() => setPopupDismissed(true)}
                   className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[10px] py-5 rounded-2xl transition-all shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-3 active:scale-[0.98]"
