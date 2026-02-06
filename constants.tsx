@@ -45,9 +45,8 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
 যেকোনো আপডেট, সমস্যা বা পরামর্শের জন্য  
 ইমেইল: zidan.mahmud.x@gmail.com
 
-অথবা নিচে ফিসবুক আইকন এ ক্লিক করে ফেসবুকে মেসেজ দিন।
-
-,
+অথবা নিচে ফেসবুক আইকনে ক্লিক করে ফেসবুকে মেসেজ দিন।
+`,
   showPopup: true,
   facebookLink: "https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr",
   twitterLink: "https://renon-x-studio.vercel.app/",
