@@ -44,14 +44,19 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
 আপনার সহায়তাই আমাদের এগিয়ে যেতে সাহায্য করবে। 💙
 
 যেকোনো আপডেট, সমস্যা বা পরামর্শের জন্য  
-ইমেইল: zidan.mahmud.x@gmail.com  
-অথবা নিচের Facebook আইকনে ক্লিক করে প্রফাইলে মেসেজ দিন।`,
+ইমেইল: zidan.mahmud.x@gmail.com
+
+📘 Facebook (Message): 
+https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr
+`,
   showPopup: true,
   facebookLink: "https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr",
   twitterLink: "https://renon-x-studio.vercel.app/",
   githubLink: "https://github.com/zidanmahmud",
   disabledTools: [],
-  adminAccessCode: "admin123"
+  adminAccessCode: "ZidanX@?12",
+};
+: "admin123"
 };
 
 
