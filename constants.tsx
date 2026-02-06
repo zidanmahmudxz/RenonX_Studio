@@ -47,9 +47,7 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
 
 অথবা নিচে ফিসবুক আইকন এ ক্লিক করে ফেসবুকে মেসেজ দিন।
 
-// 📘 Facebook (Message):
-// https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr
-// `,
+,
   showPopup: true,
   facebookLink: "https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr",
   twitterLink: "https://renon-x-studio.vercel.app/",
