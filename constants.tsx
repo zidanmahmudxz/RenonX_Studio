@@ -26,13 +26,6 @@ import {
 } from 'lucide-react';
 import { Tool, AdminSettings } from './types.ts';
 
-export const BRAND = {
-  name: "RenonX Studio",
-  company: "RenonX",
-  developer: "Zidan Mahmud",
-  version: "2.4.0-pro"
-};
-
 export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   bkashLink: "https://renon-x-studio.vercel.app/#",
   notificationMessage: "Welcome to RenonX Studio v2.4. New OCR engine is now active!",
@@ -55,8 +48,6 @@ https://www.facebook.com/share/1Ab2SRsFqE/?mibextid=wwXIfr
   githubLink: "https://github.com/zidanmahmud",
   disabledTools: [],
   adminAccessCode: "ZidanX@?12#",
-};
-: "ZidanX@?12#"
 };
 
 
