@@ -103,6 +103,23 @@ const App: React.FC = () => {
     if (isToolDisabled(selectedTool.id)) return;
 
     setIsProcessing(true);
+    // Track tool usage (DB)
+fetch("/api/track", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    toolId: selectedTool.id,
+    meta: {
+      name: selectedTool.name,
+      category: selectedTool.category,
+      time: Date.now(),
+      from: "web_app"
+    }
+  })
+}).catch(() => {});
+
     setLastResponse(null);
 
     const request: ProcessingRequest = {
