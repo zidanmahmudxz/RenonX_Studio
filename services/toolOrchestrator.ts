@@ -1,8 +1,9 @@
 import { ProcessingRequest, ProcessingResponse } from '../types.ts';
-import { processAIRequest, processImageEditingRequest } from './geminiService.ts';
+import { processAIRequest } from './geminiService.ts';
 import { jsPDF } from 'jspdf';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument } from 'pdf-lib';
+import { removeBackground } from '@imgly/background-removal';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`;
 
@@ -96,23 +97,14 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
       };
     }
 
-    // ✅ UPDATED: compress image before sending to AI to avoid Vercel/Gemini payload errors
+    // ✅ FREE BG REMOVE (NO API, NO KEY) — Client-side WASM
     if (request.tool_type === 'bg_remove') {
       const file = fileBlobs[0];
 
-      // compress to reduce payload + improve stability on free tier
-      const base64 = await fileToCompressedBase64(file, 1280, 0.8);
+      // removeBackground returns a PNG blob with transparent background
+      const resultBlob = await removeBackground(file);
 
-      const aiResponse = await processImageEditingRequest(
-        { data: base64, mimeType: 'image/jpeg' },
-        'Remove the background from this image. Keep only the main person/subject in the foreground. Output the isolated person clearly with high detail. If the output has a solid background, make it pure white.'
-      );
-
-      if (!aiResponse.imageUrl) {
-        throw { code: 'AI_FAILED', message: 'AI engine failed to isolate subject.', debug: 'Empty image part from engine' };
-      }
-
-      const processedUrl = await applyTransparencyFilter(aiResponse.imageUrl);
+      const download_url = URL.createObjectURL(resultBlob);
 
       return {
         status: 'success',
@@ -121,13 +113,13 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
         output: {
           filename: `renonx_isolated_${Date.now()}.png`,
           mime: 'image/png',
-          download_url: processedUrl,
-          preview_url: processedUrl
+          download_url,
+          preview_url: download_url
         },
         admin_telemetry: {
           tool_used: request.tool_type,
-          flags: ['AI_SEGMENTATION', 'PRO_VISION'],
-          quality_mode: 'ultra_hd',
+          flags: ['BG_REMOVE_WASM'],
+          quality_mode: 'client_wasm',
           input_count: 1,
           output_count: 1,
           execution_time_ms: Date.now() - startTime
@@ -402,7 +394,6 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
     }
 
     throw { code: 'ROUTE_ERROR', message: 'The engine could not route this tool request.', debug: `Unknown tool_type: ${request.tool_type}` };
-
   } catch (err: any) {
     return {
       status: 'error',
@@ -434,58 +425,10 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-// ✅ NEW: compress image before base64 (reduces payload for free tier + avoids function crash)
-const fileToCompressedBase64 = async (
-  file: File,
-  maxDim = 1280,
-  quality = 0.8
-): Promise<string> => {
-  const dataUrl = await fileToBase64(file);
-  const img = await loadImage(dataUrl);
-
-  const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const w = Math.max(1, Math.round(img.width * ratio));
-  const h = Math.max(1, Math.round(img.height * ratio));
-
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-
-  const ctx = canvas.getContext('2d');
-  ctx?.drawImage(img, 0, 0, w, h);
-
-  return canvas.toDataURL('image/jpeg', quality);
-};
-
 const loadImage = (url: string): Promise<HTMLImageElement> => {
   return new Promise((resolve) => {
     const i = new Image();
     i.onload = () => resolve(i);
     i.src = url;
   });
-};
-
-const applyTransparencyFilter = async (dataUrl: string): Promise<string> => {
-  const img = await loadImage(dataUrl);
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return dataUrl;
-
-  ctx.drawImage(img, 0, 0);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    if (r > 245 && g > 245 && b > 245) {
-      data[i + 3] = 0;
-    }
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL('image/png');
 };
