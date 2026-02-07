@@ -1,16 +1,10 @@
-import { sql } from '@vercel/postgres';
+const { sql } = require('@vercel/postgres');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const result = await sql`SELECT 1 as ok`;
-    res.status(200).json({
-      connected: true,
-      result: result.rows,
-    });
-  } catch (error) {
-    res.status(500).json({
-      connected: false,
-      error: error.message,
-    });
+    return res.status(200).json({ ok: true, rows: result.rows });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
-}
+};
