@@ -46,6 +46,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResponse, setLastResponse] = useState<ProcessingResponse | null>(null);
   const [telemetry, setTelemetry] = useState<TelemetryLog[]>([]);
+  const [stats, setStats] = useState<{ total: number; last24h: number } | null>(null);
   const [userMessage, setUserMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -97,6 +98,16 @@ useEffect(() => {
     }
   })();
 }, []);
+
+  useEffect(() => {
+  if (!isAdminMode) return;
+
+  fetch("/api/stats")
+    .then((r) => r.json())
+    .then((d) => setStats(d))
+    .catch(() => setStats({ total: 0, last24h: 0 }));
+}, [isAdminMode]);
+
 
 // 2) Save settings to DB whenever adminSettings changes (after first load)
 useEffect(() => {
@@ -256,7 +267,7 @@ fetch("/api/track", {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div className="glass p-6 md:p-8 rounded-[32px] border border-indigo-500/20 bg-indigo-500/5">
                     <BarChart3 className="text-indigo-400 mb-4" size={32} />
-                    259 | <div className="text-2xl md:text-3xl font-black mb-1">{totalExecutions}</div>
+                    259 | <div className="text-2xl md:text-3xl font-black mb-1">{stats?.total ?? 0}</div>
                     <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Total Executions</div>
                   </div>
                   <div className="glass p-6 md:p-8 rounded-[32px] border border-emerald-500/20 bg-emerald-500/5">
