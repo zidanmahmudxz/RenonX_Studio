@@ -101,6 +101,14 @@ useEffect(() => {
   }).catch(() => {});
 }, [adminSettings, settingsLoaded]);
 
+  // 3) Also save settings locally (so refresh keeps latest immediately)
+useEffect(() => {
+  try {
+    localStorage.setItem("renonx_admin_settings", JSON.stringify(adminSettings));
+  } catch (e) {}
+}, [adminSettings]);
+
+
   // Telemetry Aggregation
   const getToolStats = () => {
     const stats: Record<string, number> = {};
