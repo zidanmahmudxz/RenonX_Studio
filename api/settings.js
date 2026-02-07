@@ -1,80 +1,63 @@
-// api/settings.js
-import { Pool } from "pg";
+import pg from "pg";
 
-const pool =
-  globalThis.__renonx_pool ||
-  new Pool({
-    connectionString:
-      process.env.DATABASE_URL ||
-      process.env.POSTGRES_URL ||
-      process.env.POSTGRES_PRISMA_URL ||
-      process.env.DATABASE_URL_UNPOOLED ||
-      process.env.POSTGRES_URL_NO_SSL,
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-  });
+const { Pool } = pg;
 
-globalThis.__renonx_pool = pool;
+let pool;
+
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
+      ssl: { rejectUnauthorized: false },
+    });
+  }
+  return pool;
+}
 
 async function ensureTable() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS renonx_admin_settings (
-      id INT PRIMARY KEY,
-      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  const p = getPool();
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS admin_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      data JSONB NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
 }
 
 export default async function handler(req, res) {
-  // Preflight support (safe)
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
-  }
-
   try {
     await ensureTable();
+    const p = getPool();
 
     if (req.method === "GET") {
-      const r = await pool.query(
-        "SELECT data FROM renonx_admin_settings WHERE id = 1 LIMIT 1"
-      );
-
-      if (r.rowCount === 0) {
-        await pool.query(
-          "INSERT INTO renonx_admin_settings (id, data) VALUES (1, '{}'::jsonb)"
-        );
-        res.status(200).json({ ok: true, data: {} });
-        return;
-      }
-
-      res.status(200).json({ ok: true, data: r.rows[0].data || {} });
-      return;
+      const r = await p.query("SELECT data FROM admin_settings WHERE id=1;");
+      const data = r.rows?.[0]?.data || null;
+      return res.status(200).json({ ok: true, data });
     }
 
     if (req.method === "POST") {
-      const body = req.body || {};
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-      await pool.query(
+      await p.query(
         `
-        INSERT INTO renonx_admin_settings (id, data, updated_at)
-        VALUES (1, $1::jsonb, NOW())
+        INSERT INTO admin_settings (id, data)
+        VALUES (1, $1::jsonb)
         ON CONFLICT (id)
-        DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+        DO UPDATE SET data = EXCLUDED.data, updated_at = NOW();
         `,
         [JSON.stringify(body)]
       );
 
-      res.status(200).json({ ok: true, saved: true });
-      return;
+      return res.status(200).json({ ok: true });
     }
 
-    res.status(405).json({ ok: false, error: "Method not allowed" });
+    return res.status(405).json({ ok: false, error: "METHOD_NOT_ALLOWED" });
   } catch (e) {
-    res.status(500).json({
+    return res.status(500).json({
       ok: false,
-      error: "settings api failed",
-      message: String(e?.message || e),
+      error: "INTERNAL_ERROR",
+      message: e?.message || String(e),
     });
   }
 }
