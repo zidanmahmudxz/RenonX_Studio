@@ -76,8 +76,19 @@ export default async function handler(req, res) {
       text: response.text || "No response",
       citations: [],
     });
-  } catch (err) {
-    console.error("Gemini API error:", err);
-    return res.status(500).json({ error: "Gemini API failed" });
-  }
+} catch (err) {
+  console.error("Gemini API error (raw):", err);
+
+  const message =
+    err?.message ||
+    err?.toString?.() ||
+    "Unknown error";
+
+  const details = err?.response?.data || err?.response || null;
+
+  return res.status(500).json({
+    error: message,
+    details,
+  });
 }
+
