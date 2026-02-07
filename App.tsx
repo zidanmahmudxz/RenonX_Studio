@@ -56,6 +56,8 @@ const App: React.FC = () => {
   const [loginPass, setLoginPass] = useState('');
   const [showCode, setShowCode] = useState(false);
   const [adminSettings, setAdminSettings] = useState<AdminSettings>(() => {
+    
+    
     const saved = localStorage.getItem('renonx_admin_settings');
     const parsed = saved ? JSON.parse(saved) : DEFAULT_ADMIN_SETTINGS;
     return { ...DEFAULT_ADMIN_SETTINGS, ...parsed };
