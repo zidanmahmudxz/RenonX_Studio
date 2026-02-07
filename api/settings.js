@@ -1,37 +1,80 @@
-import { sql } from "@vercel/postgres";
+// api/settings.js
+import { Pool } from "pg";
+
+const pool =
+  globalThis.__renonx_pool ||
+  new Pool({
+    connectionString:
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.POSTGRES_PRISMA_URL ||
+      process.env.DATABASE_URL_UNPOOLED ||
+      process.env.POSTGRES_URL_NO_SSL,
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
+  });
+
+globalThis.__renonx_pool = pool;
+
+async function ensureTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS renonx_admin_settings (
+      id INT PRIMARY KEY,
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+}
 
 export default async function handler(req, res) {
-  try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS admin_settings (
-        id TEXT PRIMARY KEY,
-        data JSONB NOT NULL,
-        updated_at TIMESTAMPTZ DEFAULT now()
-      )
-    `;
+  // Preflight support (safe)
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
 
-    const key = "main";
+  try {
+    await ensureTable();
 
     if (req.method === "GET") {
-      const result = await sql`
-        SELECT data FROM admin_settings WHERE id = ${key} LIMIT 1
-      `;
-      return res.status(200).json({ ok: true, data: result.rows[0]?.data || null });
+      const r = await pool.query(
+        "SELECT data FROM renonx_admin_settings WHERE id = 1 LIMIT 1"
+      );
+
+      if (r.rowCount === 0) {
+        await pool.query(
+          "INSERT INTO renonx_admin_settings (id, data) VALUES (1, '{}'::jsonb)"
+        );
+        res.status(200).json({ ok: true, data: {} });
+        return;
+      }
+
+      res.status(200).json({ ok: true, data: r.rows[0].data || {} });
+      return;
     }
 
     if (req.method === "POST") {
       const body = req.body || {};
-      await sql`
-        INSERT INTO admin_settings (id, data)
-        VALUES (${key}, ${body})
-        ON CONFLICT (id) DO UPDATE
-        SET data = EXCLUDED.data, updated_at = now()
-      `;
-      return res.status(200).json({ ok: true });
+
+      await pool.query(
+        `
+        INSERT INTO renonx_admin_settings (id, data, updated_at)
+        VALUES (1, $1::jsonb, NOW())
+        ON CONFLICT (id)
+        DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+        `,
+        [JSON.stringify(body)]
+      );
+
+      res.status(200).json({ ok: true, saved: true });
+      return;
     }
 
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
+    res.status(405).json({ ok: false, error: "Method not allowed" });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: String(e) });
+    res.status(500).json({
+      ok: false,
+      error: "settings api failed",
+      message: String(e?.message || e),
+    });
   }
 }
