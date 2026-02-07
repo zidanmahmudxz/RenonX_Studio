@@ -1,4 +1,3 @@
-
 import { ProcessingRequest, ProcessingResponse } from '../types.ts';
 import { processAIRequest, processImageEditingRequest } from './geminiService.ts';
 import { jsPDF } from 'jspdf';
@@ -9,7 +8,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@4.4.168/buil
 
 export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: File[]): Promise<ProcessingResponse> => {
   const startTime = Date.now();
-  
+
   try {
     if (request.input_files.length === 0 && fileBlobs.length === 0) {
       throw { code: 'NO_FILES', message: 'No input files provided.', debug: 'input_files array is empty' };
@@ -20,28 +19,31 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       const numPages = Math.min(pdf.numPages, 10);
-      
+
       const pageImages: { data: string; mimeType: string }[] = [];
-      
+
       for (let i = 1; i <= numPages; i++) {
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 1.5 });
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         if (!context) continue;
+
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+
         await page.render({ canvasContext: context, viewport }).promise;
-        pageImages.push({ 
-          data: canvas.toDataURL('image/jpeg', 0.8).split(',')[1], 
-          mimeType: 'image/jpeg' 
+
+        pageImages.push({
+          data: canvas.toDataURL('image/jpeg', 0.8).split(',')[1],
+          mimeType: 'image/jpeg'
         });
       }
 
       const aiResult = await processAIRequest(
-        'pdf_ocr', 
-        null, 
-        "Perform high-fidelity OCR on these document pages. Extract all text exactly as written, preserving headers and lists. Return ONLY the extracted text.",
+        'pdf_ocr',
+        null,
+        'Perform high-fidelity OCR on these document pages. Extract all text exactly as written, preserving headers and lists. Return ONLY the extracted text.',
         { images: pageImages }
       );
 
@@ -67,9 +69,10 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
     if (request.tool_type.startsWith('ai_') && request.tool_type !== 'ai_image_edit') {
       const file = fileBlobs[0];
       const base64 = await fileToBase64(file);
+
       const aiResult = await processAIRequest(
-        request.tool_type, 
-        { data: base64, mimeType: file.type }, 
+        request.tool_type,
+        { data: base64, mimeType: file.type },
         request.user_message,
         request.options
       );
@@ -93,13 +96,16 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
       };
     }
 
+    // ✅ UPDATED: compress image before sending to AI to avoid Vercel/Gemini payload errors
     if (request.tool_type === 'bg_remove') {
       const file = fileBlobs[0];
-      const base64 = await fileToBase64(file);
-      
+
+      // compress to reduce payload + improve stability on free tier
+      const base64 = await fileToCompressedBase64(file, 1280, 0.8);
+
       const aiResponse = await processImageEditingRequest(
-        { data: base64, mimeType: file.type },
-        "Remove the background from this image. Keep only the main person/subject in the foreground. Output the isolated person clearly with high detail. If the output has a solid background, make it pure white."
+        { data: base64, mimeType: 'image/jpeg' },
+        'Remove the background from this image. Keep only the main person/subject in the foreground. Output the isolated person clearly with high detail. If the output has a solid background, make it pure white.'
       );
 
       if (!aiResponse.imageUrl) {
@@ -133,17 +139,17 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
       const file = fileBlobs[0];
       const dataUrl = await fileToBase64(file);
       const img = await loadImage(dataUrl);
-      
+
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0);
-      
+
       const compressedBlob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.6); 
+        canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.6);
       });
-      
+
       const download_url = URL.createObjectURL(compressedBlob);
       return {
         status: 'success',
@@ -182,7 +188,7 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
         if (i > 0) pdf.addPage();
         pdf.addImage(dataUrl, 'JPEG', (pageWidth - w) / 2, (pageHeight - h) / 2, w, h);
       }
-      
+
       const pdfBlob = pdf.output('blob');
       const download_url = URL.createObjectURL(pdfBlob);
 
@@ -211,17 +217,17 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
       const targetFormat = request.options?.target_format || 'image/png';
       const dataUrl = await fileToBase64(file);
       const img = await loadImage(dataUrl);
-      
+
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0);
-      
+
       const convertedBlob = await new Promise<Blob>((resolve) => {
         canvas.toBlob((b) => resolve(b!), targetFormat);
       });
-      
+
       const download_url = URL.createObjectURL(convertedBlob);
       return {
         status: 'success',
@@ -263,7 +269,7 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
 
         await page.render({ canvasContext: context, viewport }).promise;
         const imageUrl = canvas.toDataURL('image/png');
-        
+
         outputItems.push({
           filename: `renonx_page_${i}.png`,
           mime: 'image/png',
@@ -327,7 +333,7 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
       const sourcePdf = await PDFDocument.load(arrayBuffer);
       const totalPages = sourcePdf.getPageCount();
       const splitRange = request.options?.split_range || '';
-      
+
       let rangesToExtract: number[][] = [];
 
       if (!splitRange.trim()) {
@@ -365,11 +371,11 @@ export const orchestrateTool = async (request: ProcessingRequest, fileBlobs: Fil
         const newPdf = await PDFDocument.create();
         const copiedPages = await newPdf.copyPages(sourcePdf, indices);
         copiedPages.forEach(p => newPdf.addPage(p));
-        
+
         const pdfBytes = await newPdf.save();
         const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
         const download_url = URL.createObjectURL(pdfBlob);
-        
+
         outputItems.push({
           filename: `renonx_split_part_${idx + 1}.pdf`,
           mime: 'application/pdf',
@@ -428,6 +434,29 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// ✅ NEW: compress image before base64 (reduces payload for free tier + avoids function crash)
+const fileToCompressedBase64 = async (
+  file: File,
+  maxDim = 1280,
+  quality = 0.8
+): Promise<string> => {
+  const dataUrl = await fileToBase64(file);
+  const img = await loadImage(dataUrl);
+
+  const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * ratio));
+  const h = Math.max(1, Math.round(img.height * ratio));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext('2d');
+  ctx?.drawImage(img, 0, 0, w, h);
+
+  return canvas.toDataURL('image/jpeg', quality);
+};
+
 const loadImage = (url: string): Promise<HTMLImageElement> => {
   return new Promise((resolve) => {
     const i = new Image();
@@ -443,20 +472,20 @@ const applyTransparencyFilter = async (dataUrl: string): Promise<string> => {
   canvas.height = img.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return dataUrl;
-  
+
   ctx.drawImage(img, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
-  
+
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i];
-    const g = data[i+1];
-    const b = data[i+2];
+    const g = data[i + 1];
+    const b = data[i + 2];
     if (r > 245 && g > 245 && b > 245) {
-      data[i+3] = 0;
+      data[i + 3] = 0;
     }
   }
-  
+
   ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL('image/png');
 };
