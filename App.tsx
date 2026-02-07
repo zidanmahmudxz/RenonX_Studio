@@ -483,7 +483,7 @@ fetch("/api/track", {
       )}
 
       {/* Main Popup Notification Overlay */}
-      {adminSettings.showPopup && !popupDismissed && (
+      {!isAdminMode && adminSettings.showPopup && !popupDismissed && (
         <div className="fixed inset-0 z-[110] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
            <div className="glass max-w-lg w-full p-8 md:p-14 rounded-[32px] md:rounded-[40px] border border-indigo-500/20 shadow-[0_0_50px_rgba(79,70,229,0.15)] relative overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 delay-150">
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
