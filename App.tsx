@@ -49,6 +49,13 @@ const App: React.FC = () => {
   const [userMessage, setUserMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // ✅ DB-based execution stats (shared across all browsers)
+const [dbStats, setDbStats] = useState<{ total: number; last24h: number }>({
+  total: 0,
+  last24h: 0,
+});
+
   
   // Admin States
   const [isAdminMode, setIsAdminMode] = useState(false);
