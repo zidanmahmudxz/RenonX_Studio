@@ -1,10 +1,12 @@
 import { Pool } from "pg";
 
 let pool;
+
 function getPool() {
   if (!pool) {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString:
+        process.env.DATABASE_URL || process.env.POSTGRES_URL,
       ssl: { rejectUnauthorized: false },
     });
   }
@@ -24,7 +26,6 @@ export default async function handler(req, res) {
 
     const p = getPool();
 
-    // Table তৈরি না থাকলেও কাজ করার জন্য safe-create
     await p.query(`
       CREATE TABLE IF NOT EXISTS tool_executions (
         id SERIAL PRIMARY KEY,
@@ -36,7 +37,7 @@ export default async function handler(req, res) {
 
     await p.query(
       `INSERT INTO tool_executions (tool_id, meta) VALUES ($1, $2)`,
-      [toolId, meta ? JSON.stringify(meta) : null]
+      [toolId, meta ?? null]
     );
 
     return res.status(200).json({ ok: true });
