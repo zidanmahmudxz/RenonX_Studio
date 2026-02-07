@@ -269,6 +269,10 @@ fetch("/api/track", {
                     <BarChart3 className="text-indigo-400 mb-4" size={32} />
                     259 | <div className="text-2xl md:text-3xl font-black mb-1">{stats?.total ?? 0}</div>
                     <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Total Executions</div>
+                    <div className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-1">
+  Last 24h: {stats?.last24h ?? 0}
+</div>
+
                   </div>
                   <div className="glass p-6 md:p-8 rounded-[32px] border border-emerald-500/20 bg-emerald-500/5">
                     <CheckCircle2 className="text-emerald-400 mb-4" size={32} />
