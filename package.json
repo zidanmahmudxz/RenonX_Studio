@@ -15,7 +15,8 @@
     "lucide-react": "^0.563.0",
     "jspdf": "^2.5.1",
     "pdfjs-dist": "4.4.168",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.11.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
