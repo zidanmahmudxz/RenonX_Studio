@@ -1,37 +1,59 @@
-import { sql } from "@vercel/postgres";
-
 export default async function handler(req, res) {
   try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS admin_settings (
-        id TEXT PRIMARY KEY,
-        data JSONB NOT NULL,
-        updated_at TIMESTAMPTZ DEFAULT now()
-      )
-    `;
+    // Quick ENV check (so it won't crash silently)
+    const env = {
+      has_DATABASE_URL: !!process.env.DATABASE_URL,
+      has_POSTGRES_URL: !!process.env.POSTGRES_URL,
+      has_PGHOST_UNPOOLED: !!process.env.PGHOST_UNPOOLED,
+      node: process.version,
+      method: req.method,
+    };
 
-    const key = "main";
-
-    if (req.method === "GET") {
-      const result = await sql`
-        SELECT data FROM admin_settings WHERE id = ${key} LIMIT 1
-      `;
-      return res.status(200).json({ ok: true, data: result.rows[0]?.data || null });
+    // Try import pg safely (this is where ESM problem happens often)
+    let pg;
+    try {
+      pg = await import("pg");
+    } catch (e) {
+      return res.status(500).json({
+        ok: false,
+        step: "import_pg_failed",
+        env,
+        message: e?.message || String(e),
+      });
     }
 
-    if (req.method === "POST") {
-      const body = req.body || {};
-      await sql`
-        INSERT INTO admin_settings (id, data)
-        VALUES (${key}, ${body})
-        ON CONFLICT (id) DO UPDATE
-        SET data = EXCLUDED.data, updated_at = now()
-      `;
-      return res.status(200).json({ ok: true });
+    const { Pool } = pg;
+
+    const conn =
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.POSTGRES_URL_NO_SSL ||
+      process.env.DATABASE_URL_UNPOOLED;
+
+    if (!conn) {
+      return res.status(500).json({
+        ok: false,
+        step: "missing_connection_string",
+        env,
+        message:
+          "No connection string found. Need DATABASE_URL or POSTGRES_URL (or similar).",
+      });
     }
 
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
+    const pool = new Pool({
+      connectionString: conn,
+      ssl: { rejectUnauthorized: false },
+    });
+
+    // Simple query to verify DB
+    const test = await pool.query("SELECT 1 as ok;");
+
+    return res.status(200).json({ ok: true, env, test: test.rows?.[0] });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: String(e) });
+    return res.status(500).json({
+      ok: false,
+      step: "unknown_error",
+      message: e?.message || String(e),
+    });
   }
 }
