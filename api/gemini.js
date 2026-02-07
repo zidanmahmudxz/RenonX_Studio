@@ -1,7 +1,6 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { GoogleGenAI } from "@google/genai";
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -9,54 +8,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY on server" });
+      return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
     }
 
     const { toolType, userMessage, fileData, options } = req.body || {};
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // তোমার model mapping (যেটা চাই)
     const model =
-      toolType === "ai_image_edit" ? "gemini-2.5-flash-image" : "gemini-3-flash-preview";
+      toolType === "ai_image_edit"
+        ? "gemini-2.5-flash-image"
+        : "gemini-3-flash-preview";
 
-    // prompt build
-    let prompt = "";
-    if (toolType === "ai_pdf_chat") {
-      prompt = `Answer user question: "${userMessage}" from this doc.`;
-    } else if (toolType === "ai_pdf_summary") {
-      prompt = "Summarize this document in 5 key bullet points.";
-    } else if (toolType === "ai_translate_pdf") {
-      prompt = `Translate core content to ${options?.target_lang || "English"}.`;
-    } else if (toolType === "ai_question_generator") {
-      prompt = `Generate questions based on this document.`;
-    } else if (toolType === "pdf_ocr") {
+    let prompt = userMessage || "Process this request.";
+
+    if (toolType === "pdf_ocr") {
       prompt =
         userMessage ||
-        "Perform high-fidelity OCR. Extract all text exactly as written. Return ONLY text.";
-    } else {
-      prompt = userMessage || "Process this request.";
+        "Extract all text exactly as written. Return ONLY text.";
     }
 
-    const parts: any[] = [{ text: prompt }];
+    const parts = [{ text: prompt }];
 
-    // main file data
     if (fileData?.data && fileData?.mimeType) {
       const base64 = String(fileData.data).includes(",")
-        ? String(fileData.data).split(",")[1]
-        : String(fileData.data);
+        ? fileData.data.split(",")[1]
+        : fileData.data;
 
       parts.push({
-        inlineData: { data: base64, mimeType: fileData.mimeType },
+        inlineData: {
+          data: base64,
+          mimeType: fileData.mimeType,
+        },
       });
     }
 
-    // images array (OCR pages etc)
     if (options?.images && Array.isArray(options.images)) {
       for (const img of options.images) {
         if (!img?.data || !img?.mimeType) continue;
         parts.push({
-          inlineData: { data: img.data, mimeType: img.mimeType },
+          inlineData: {
+            data: img.data,
+            mimeType: img.mimeType,
+          },
         });
       }
     }
@@ -66,12 +60,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contents: [{ role: "user", parts }],
     });
 
-    // image edit output handle
     if (toolType === "ai_image_edit") {
-      let imageUrl: string | null = null;
-      const candParts = response.candidates?.[0]?.content?.parts || [];
-      for (const p of candParts) {
-        if (p.inlineData?.data && p.inlineData?.mimeType) {
+      let imageUrl = null;
+      const cand = response.candidates?.[0]?.content?.parts || [];
+      for (const p of cand) {
+        if (p.inlineData?.data) {
           imageUrl = `data:${p.inlineData.mimeType};base64,${p.inlineData.data}`;
           break;
         }
@@ -80,11 +73,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json({
-      text: response.text || "No response.",
+      text: response.text || "No response",
       citations: [],
     });
-  } catch (e: any) {
-    console.error("API /api/gemini error:", e);
+  } catch (err) {
+    console.error("Gemini API error:", err);
     return res.status(500).json({ error: "Gemini API failed" });
   }
 }
