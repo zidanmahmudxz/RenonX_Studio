@@ -84,11 +84,17 @@ export default async function handler(req, res) {
     err?.toString?.() ||
     "Unknown error";
 
-  const details = err?.response?.data || err?.response || null;
+  // কিছু SDK error এর ভিতরে বিস্তারিত থাকে
+  const details =
+    err?.response?.data ||
+    err?.response ||
+    err?.cause ||
+    null;
 
   return res.status(500).json({
     error: message,
-    details,
+    details
   });
 }
+
 
