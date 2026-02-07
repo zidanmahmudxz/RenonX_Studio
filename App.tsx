@@ -71,9 +71,32 @@ const App: React.FC = () => {
   const [copied, setCopied] = useState(false);
 
   // Persistence for admin settings
-  useEffect(() => {
-    localStorage.setItem('renonx_admin_settings', JSON.stringify(adminSettings));
-  }, [adminSettings]);
+// 1) Load settings from DB on first load
+useEffect(() => {
+  (async () => {
+    try {
+      const r = await fetch("/api/settings");
+      const j = await r.json();
+      if (j?.ok && j?.data) {
+        setAdminSettings({ ...DEFAULT_ADMIN_SETTINGS, ...j.data });
+      }
+    } catch (e) {
+      console.warn("Failed to load settings from DB, using defaults", e);
+    } finally {
+      setSettingsLoaded(true);
+    }
+  })();
+}, []);
+
+// 2) Save settings to DB whenever adminSettings changes (after first load)
+useEffect(() => {
+  if (!settingsLoaded) return;
+  fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(adminSettings),
+  }).catch(() => {});
+}, [adminSettings, settingsLoaded]);
 
   // Telemetry Aggregation
   const getToolStats = () => {
