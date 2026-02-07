@@ -8,9 +8,7 @@ import { removeBackground } from "@imgly/background-removal";
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://esm.sh/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs";
 
-/* =========================
-   LOG EXECUTION (GLOBAL)
-========================= */
+/* -------------------- DB LOGGER -------------------- */
 const logExecution = async (payload: {
   request_id: string;
   tool_type: string;
@@ -23,13 +21,11 @@ const logExecution = async (payload: {
       body: JSON.stringify(payload),
     });
   } catch {
-    // logging failure should never block tool execution
+    // logging failure should never break tool execution
   }
 };
 
-/* =========================
-   MAIN ORCHESTRATOR
-========================= */
+/* -------------------- MAIN ORCHESTRATOR -------------------- */
 export const orchestrateTool = async (
   request: ProcessingRequest,
   fileBlobs: File[]
@@ -38,13 +34,10 @@ export const orchestrateTool = async (
 
   try {
     if (request.input_files.length === 0 && fileBlobs.length === 0) {
-      throw {
-        code: "NO_FILES",
-        message: "No input files provided.",
-      };
+      throw { code: "NO_FILES", message: "No input files provided." };
     }
 
-    /* ========== PDF OCR ========== */
+    /* ---------------- PDF OCR ---------------- */
     if (request.tool_type === "pdf_ocr") {
       const file = fileBlobs[0];
       const arrayBuffer = await file.arrayBuffer();
@@ -55,16 +48,14 @@ export const orchestrateTool = async (
       for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 1.5 });
-
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d")!;
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-
         await page.render({ canvasContext: ctx, viewport }).promise;
 
         pageImages.push({
-          data: canvas.toDataURL("image/jpeg", 0.85).split(",")[1],
+          data: canvas.toDataURL("image/jpeg", 0.8).split(",")[1],
           mimeType: "image/jpeg",
         });
       }
@@ -72,7 +63,7 @@ export const orchestrateTool = async (
       const aiResult = await processAIRequest(
         "pdf_ocr",
         null,
-        "Extract all text exactly as written. Return ONLY text.",
+        "Extract all text exactly as written.",
         { images: pageImages }
       );
 
@@ -88,22 +79,20 @@ export const orchestrateTool = async (
         tool: request.tool_type,
         output: {
           text: aiResult.text,
-          filename: `ocr_${Date.now()}.txt`,
         },
         admin_telemetry: {
           tool_used: request.tool_type,
-          execution_time_ms: Date.now() - startTime,
+          flags: ["AI_OCR"],
+          quality_mode: "vision",
           input_count: 1,
           output_count: 1,
+          execution_time_ms: Date.now() - startTime,
         },
       };
     }
 
-    /* ========== AI TOOLS ========== */
-    if (
-      request.tool_type.startsWith("ai_") &&
-      request.tool_type !== "ai_image_edit"
-    ) {
+    /* ---------------- AI TOOLS ---------------- */
+    if (request.tool_type.startsWith("ai_")) {
       const file = fileBlobs[0];
       const base64 = await fileToBase64(file);
 
@@ -124,20 +113,19 @@ export const orchestrateTool = async (
         status: "success",
         request_id: request.request_id,
         tool: request.tool_type,
-        output: {
-          text: aiResult.text,
-          citations: aiResult.citations,
-        },
+        output: aiResult,
         admin_telemetry: {
           tool_used: request.tool_type,
-          execution_time_ms: Date.now() - startTime,
+          flags: ["AI_GEN"],
+          quality_mode: "high",
           input_count: 1,
           output_count: 1,
+          execution_time_ms: Date.now() - startTime,
         },
       };
     }
 
-    /* ========== BG REMOVE (FREE WASM) ========== */
+    /* ---------------- BG REMOVE (WASM) ---------------- */
     if (request.tool_type === "bg_remove") {
       const resultBlob = await removeBackground(fileBlobs[0]);
       const url = URL.createObjectURL(resultBlob);
@@ -153,24 +141,23 @@ export const orchestrateTool = async (
         request_id: request.request_id,
         tool: request.tool_type,
         output: {
-          filename: `bg_removed_${Date.now()}.png`,
+          filename: `renonx_bg_${Date.now()}.png`,
           mime: "image/png",
           download_url: url,
           preview_url: url,
         },
         admin_telemetry: {
           tool_used: request.tool_type,
-          execution_time_ms: Date.now() - startTime,
+          flags: ["BG_REMOVE_WASM"],
+          quality_mode: "client",
           input_count: 1,
           output_count: 1,
+          execution_time_ms: Date.now() - startTime,
         },
       };
     }
 
-    throw {
-      code: "UNKNOWN_TOOL",
-      message: `Unknown tool_type: ${request.tool_type}`,
-    };
+    throw { code: "UNKNOWN_TOOL", message: "Unknown tool type" };
   } catch (err: any) {
     await logExecution({
       request_id: request.request_id,
@@ -184,21 +171,21 @@ export const orchestrateTool = async (
       tool: request.tool_type,
       error: {
         code: err.code || "ENGINE_ERROR",
-        message: err.message || "Tool execution failed",
+        message: err.message || "Execution failed",
       },
       admin_telemetry: {
         tool_used: request.tool_type,
-        execution_time_ms: Date.now() - startTime,
+        flags: ["ERROR"],
+        quality_mode: "none",
         input_count: fileBlobs.length,
         output_count: 0,
+        execution_time_ms: Date.now() - startTime,
       },
     };
   }
 };
 
-/* =========================
-   HELPERS
-========================= */
+/* ---------------- HELPERS ---------------- */
 const fileToBase64 = (file: File): Promise<string> =>
   new Promise((res, rej) => {
     const r = new FileReader();
