@@ -20,8 +20,9 @@ export default async function handler(req, res) {
 
     // ✅ Free tier friendly fallback models
     // (পরে চাইলে env দিয়ে override করতে পারো)
-    const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-1.5-flash";
-    const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-1.5-flash";
+   const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-3-flash-preview";
+const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image-preview";
+
 
     const model = toolType === "ai_image_edit" ? IMAGE_MODEL : TEXT_MODEL;
 
